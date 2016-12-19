@@ -1,22 +1,48 @@
-import craigslist
 from craigslist import CraigslistHousing
+from slackclient import SlackClient
+import math
+
 
 SITE="chicago"
 CATEGORY="apa"
 AREA="chc"
 FILTERS={'min_price': 1000, 'max_price': 2000}
 
-LOGAN_SQUARE = [[41.913549, -87.73146] ,[41.932179, -87.687316]]
-WICKER_PARK = [[41.903015, -87.687378],[41.914318, -87.66753]]
-BUCKTOWN = [[41.913582, -87.687987],[41.936104, -87.66362]]
-NEIGHBORHOOD_COORDS = {'Logan Square': LOGAN_SQUARE, 'Wicker Park': WICKER_PARK, 'Bucktown': BUCKTOWN}
+SLACK_TOKEN = 'xoxp-119041606726-118449696053-119053240359-1fba2bfc926f40068ae4bc6c679794a1'
+SLACK_CHANNEL = "#housing  "
+
+LOGAN_SQUARE = [
+                [41.913549, -87.73146] ,
+                [41.932179, -87.687316]
+               ]
+WICKER_PARK = [
+                [41.903015, -87.687378],
+                [41.914318, -87.66753]
+              ]
+BUCKTOWN = [
+            [41.913582, -87.687987],
+            [41.936104, -87.66362]
+           ]
+NEIGHBORHOOD_COORDS = {
+                        'Logan Square': LOGAN_SQUARE, 
+                        'Wicker Park': WICKER_PARK, 
+                        'Bucktown': BUCKTOWN
+                      }
+
+CTA_STATIONS = {
+                'Damen': [41.9099186, -87.67762199999999],
+                'Division': [41.9033574, -87.66645340000002],
+                'Western' : [41.915888, -87.68774300000001]
+                }
 
 
 class ListingResult:
     def __init__(self, result):
         self.cl_result = result
-        self.area = None
-        self.reported_area = None
+        self.area = ""
+        self.reported_area = ""
+        self.cta_dist = 0.0
+        self.cta_station = ""
 
 def in_box(coords, box):
     if not coords or not box:
@@ -31,7 +57,6 @@ def get_area(result):
     area_found = False
     area = ""
     for area, coords in NEIGHBORHOOD_COORDS.items():
-        print area
         if in_box(geotag, coords):
             return area
     
@@ -42,27 +67,68 @@ def get_reported_area(result):
             if area.lower() in location.lower():
                 return area
     
-def main():
-    config_sit = "chicago"
-    config_category = "apa"
-    config_filters = {}
     
-    craigslist = CraigslistHousing (site = SITE, area = AREA, category = CATEGORY, filters = FILTERS )
-    results = craigslist.get_results(sort_by='newest', geotagged=True, limit=10)
+def set_area(dec_result, area, reported_area):
+    if area:
+        dec_result.area = area
+    elif reported_area:
+        dec_result.area = reported_area
+    
+def coord_distance(x1,y1,x2,y2):
+     dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+     return dist
+
+def set_cta_dist(dec_result):
+    near_cta = False
+    min_dist = float('NaN')
+    cta_dist = float('NaN')
+    cta_name = "" 
+    MAX_TRANSIT_DIST_KM = 1
+
+    geotag = dec_result.cl_result["geotag"]
+    if not geotag:
+        return
+    for station, coords in CTA_STATIONS.items():
+        dist = coord_distance(coords[0], coords[1], geotag[0], geotag[1])
+        if (min_dist is None or dist < min_dist) and dist < MAX_TRANSIT_DIST:
+            cta_name = station
+            near_cta = True
+
+        if (cta_dist is None or dist < min_dist):
+            cta_dist = dist
+
+    dec_result.cta_dist = cta_dist
+    dec_result.cta_name = cta_name
+    
+def load_listings_from_craigslist(craigslist):
+    NUM_LISTINGS_TO_SCRAPE = 5
+    results = craigslist.get_results(sort_by='newest', geotagged=True, limit=NUM_LISTINGS_TO_SCRAPE)
     listing_results = []
     for result in results:
         dec_result = ListingResult(result)
-        dec_result.area = get_area(result)
-        dec_result.reported_area = get_reported_area(result)
+        set_area(dec_result, get_area(result), get_reported_area(result))
+        set_cta_dist(dec_result)
         listing_results.append(dec_result)
-        if dec_result.area:
-            print dec_result.area
-        if dec_result.reported_area:
-            print dec_result.reported_area    
-        print dec_result.cl_result
-    print len(listing_results)
+    return listing_results
+    
+def output_to_slack(listing_results):
+    sc = SlackClient(SLACK_TOKEN)
+    
+    for dec_result in listing_results:
+        result = dec_result.cl_result
+        desc = "{0} | {1} | {2} | {3} | <{4}>".format(dec_result.area, result["price"], dec_result.cta_dist, result["name"], result["url"])
+        sc.api_call(
+            "chat.postMessage", channel=SLACK_CHANNEL, text=desc, username='pybot', icon_emoji=':robot_face:'
+        )
+    
+def main():
+    craigslist = CraigslistHousing (site = SITE, area = AREA, category = CATEGORY, filters = FILTERS )
+    results = load_listings_from_craigslist(craigslist)
+    output_to_slack(results)
 
 
+    
+    
 if __name__ == '__main__':
     #load json config
     main() #add config
