@@ -1,15 +1,15 @@
 from craigslist import CraigslistHousing
 from slackclient import SlackClient
 import math
-
+import json
 
 SITE="chicago"
 CATEGORY="apa"
 AREA="chc"
 FILTERS={'min_price': 1000, 'max_price': 2000}
 
-SLACK_TOKEN = 'xoxp-119041606726-118449696053-119053240359-1fba2bfc926f40068ae4bc6c679794a1'
-SLACK_CHANNEL = "#housing  "
+
+CONFIG_FILE = 'config.json'
 
 LOGAN_SQUARE = [
                 [41.913549, -87.73146] ,
@@ -111,25 +111,25 @@ def load_listings_from_craigslist(craigslist):
         listing_results.append(dec_result)
     return listing_results
     
-def output_to_slack(listing_results):
-    sc = SlackClient(SLACK_TOKEN)
+def output_to_slack(listing_results, slack_token, slack_channel):
+    sc = SlackClient(slack_token)
     
     for dec_result in listing_results:
         result = dec_result.cl_result
         desc = "{0} | {1} | {2} | {3} | <{4}>".format(dec_result.area, result["price"], dec_result.cta_dist, result["name"], result["url"])
         sc.api_call(
-            "chat.postMessage", channel=SLACK_CHANNEL, text=desc, username='pybot', icon_emoji=':robot_face:'
+            "chat.postMessage", channel=slack_channel, text=desc, username='pybot', icon_emoji=':robot_face:'
         )
     
-def main():
+def main(slack_token, slack_channel):
     craigslist = CraigslistHousing (site = SITE, area = AREA, category = CATEGORY, filters = FILTERS )
     results = load_listings_from_craigslist(craigslist)
-    output_to_slack(results)
-
-
-    
+    output_to_slack(results, slack_token, slack_channel)
     
 if __name__ == '__main__':
-    #load json config
-    main() #add config
+    with open(CONFIG_FILE) as config_file:
+        data = json.load(config_file)
+        slack_token = data["slack_token"]
+        slack_channel = data["slack_channel"]
+    main(slack_token, slack_channel)
     
