@@ -24,7 +24,7 @@ BUCKTOWN = [
            ]
 LAKEVIEW = [
             [41.932343, -87.673988],
-            [41.961652-87.630129]
+            [41.961652, -87.630129]
            ]
            
 LINCOLN_PARK = [
@@ -55,13 +55,13 @@ class ListingResult:
         self.cl_result = result
         self.area = ""
         self.cta_dist = float('NaN')
-        self.cta_station = ""
+        self.cta_station = "???"
 
 def in_box(coords, box):
     if not coords or not box:
         return False
- 
-    if box[0][0] < coords[0] < box[1][0] and box[1][1] < coords[1] < box[0][1]:
+
+    if box[0][0] <= coords[0] <= box[1][0] and box[0][1] <= coords[1] <= box[1][1]:
         return True
     return False
 
@@ -98,7 +98,7 @@ def set_cta_dist(dec_result):
     near_cta = False
     cta_dist = float('NaN')
     cta_name = "" 
-    MAX_TRANSIT_DIST_KM = 100.0
+    MAX_TRANSIT_DIST_KM = 0.804672
 
     geotag = dec_result.cl_result["geotag"]
     if not geotag:
@@ -107,13 +107,12 @@ def set_cta_dist(dec_result):
         dist = coord_distance(coords[0], coords[1], geotag[0], geotag[1])
         if dist < MAX_TRANSIT_DIST_KM:
             if (math.isnan(cta_dist) or dist < cta_dist):
-                print station
                 cta_name = station
                 near_cta = True
                 cta_dist = dist
 
     dec_result.cta_dist = km_to_mi(cta_dist)
-    dec_result.cta_name = cta_name
+    dec_result.cta_station = cta_name
     
 def load_listings_from_craigslist(craigslist):
     NUM_LISTINGS_TO_SCRAPE = 5
@@ -125,13 +124,19 @@ def load_listings_from_craigslist(craigslist):
         set_cta_dist(dec_result)
         listing_results.append(dec_result)
     return listing_results
-    
+   
+def is_eligible_listing(listing):
+        return listing.area
+
 def output_to_slack(listing_results, slack_token, slack_channel):
     sc = SlackClient(slack_token)
 
     for dec_result in listing_results:
         result = dec_result.cl_result
-        desc = "{0} | {1} | {2}:{3:.2f} | {4} | <{5}>".format(
+        print result
+        if not is_eligible_listing(dec_result):
+            continue
+        desc = "{0} | {1} | {2}: {3:.2f} mi | {4} | <{5}>".format(
                         result["price"], 
                         dec_result.area, 
                         dec_result.cta_station, 
@@ -153,4 +158,3 @@ if __name__ == '__main__':
         slack_token = data["slack_token"]
         slack_channel = data["slack_channel"]
     main(slack_token, slack_channel)
-    
