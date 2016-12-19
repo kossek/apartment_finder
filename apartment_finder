@@ -6,19 +6,64 @@ CATEGORY="apa"
 AREA="chc"
 FILTERS={'min_price': 1000, 'max_price': 2000}
 
+LOGAN_SQUARE = [[41.913549, -87.73146] ,[41.932179, -87.687316]]
+WICKER_PARK = [[41.903015, -87.687378],[41.914318, -87.66753]]
+BUCKTOWN = [[41.913582, -87.687987],[41.936104, -87.66362]]
+NEIGHBORHOOD_COORDS = {'Logan Square': LOGAN_SQUARE, 'Wicker Park': WICKER_PARK, 'Bucktown': BUCKTOWN}
+
+
+class ListingResult:
+    def __init__(self, result):
+        self.cl_result = result
+        self.area = None
+        self.reported_area = None
+
+def in_box(coords, box):
+    if not coords or not box:
+        return False
+ 
+    if box[0][0] < coords[0] < box[1][0] and box[1][1] < coords[1] < box[0][1]:
+        return True
+    return False
+
+def get_area(result):
+    geotag = result["geotag"]
+    area_found = False
+    area = ""
+    for area, coords in NEIGHBORHOOD_COORDS.items():
+        print area
+        if in_box(geotag, coords):
+            return area
+    
+def get_reported_area(result):
+    location = result["where"]
+    for area, coords in NEIGHBORHOOD_COORDS.iteritems():
+        if area and coords:
+            if area.lower() in location.lower():
+                return area
+    
 def main():
-	config_sit = "chicago"
-	config_category = "apa"
-	config_filters = {}
-	
-	craigslist = CraigslistHousing (site = SITE, area = AREA, category = CATEGORY, filters = FILTERS )
-	results = craigslist.get_results(sort_by='newest', geotagged=True, limit=20)
-	
-	for result in results:
-		print result
+    config_sit = "chicago"
+    config_category = "apa"
+    config_filters = {}
+    
+    craigslist = CraigslistHousing (site = SITE, area = AREA, category = CATEGORY, filters = FILTERS )
+    results = craigslist.get_results(sort_by='newest', geotagged=True, limit=10)
+    listing_results = []
+    for result in results:
+        dec_result = ListingResult(result)
+        dec_result.area = get_area(result)
+        dec_result.reported_area = get_reported_area(result)
+        listing_results.append(dec_result)
+        if dec_result.area:
+            print dec_result.area
+        if dec_result.reported_area:
+            print dec_result.reported_area    
+        print dec_result.cl_result
+    print len(listing_results)
 
 
 if __name__ == '__main__':
-	#load json config
-	main() #add config
-	
+    #load json config
+    main() #add config
+    
