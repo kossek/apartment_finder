@@ -80,7 +80,6 @@ def get_reported_area(result):
             if area.lower() in location.lower():
                 return area
     
-    
 def set_area(dec_result, area, reported_area):
     if area:
         dec_result.area = area
@@ -88,14 +87,18 @@ def set_area(dec_result, area, reported_area):
         dec_result.area = reported_area
     
 def coord_distance(x1,y1,x2,y2):
-     dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-     return dist
+    dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+    return dist
 
+def km_to_mi(km):
+    CONVERSION_FACTOR = 0.621371
+    return CONVERSION_FACTOR * km
+     
 def set_cta_dist(dec_result):
     near_cta = False
     cta_dist = float('NaN')
     cta_name = "" 
-    MAX_TRANSIT_DIST_KM = 1.5
+    MAX_TRANSIT_DIST_KM = 100.0
 
     geotag = dec_result.cl_result["geotag"]
     if not geotag:
@@ -103,12 +106,13 @@ def set_cta_dist(dec_result):
     for station, coords in CTA_STATIONS.items():
         dist = coord_distance(coords[0], coords[1], geotag[0], geotag[1])
         if dist < MAX_TRANSIT_DIST_KM:
-            if (cta_dist is None or dist < cta_dist):
+            if (math.isnan(cta_dist) or dist < cta_dist):
+                print station
                 cta_name = station
                 near_cta = True
                 cta_dist = dist
 
-    dec_result.cta_dist = cta_dist
+    dec_result.cta_dist = km_to_mi(cta_dist)
     dec_result.cta_name = cta_name
     
 def load_listings_from_craigslist(craigslist):
@@ -127,7 +131,7 @@ def output_to_slack(listing_results, slack_token, slack_channel):
 
     for dec_result in listing_results:
         result = dec_result.cl_result
-        desc = "{0} | {1} | {2}:{3} | {4} | <{5}>".format(
+        desc = "{0} | {1} | {2}:{3:.2f} | {4} | <{5}>".format(
                         result["price"], 
                         dec_result.area, 
                         dec_result.cta_station, 
