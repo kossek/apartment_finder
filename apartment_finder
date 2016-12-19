@@ -8,7 +8,6 @@ CATEGORY="apa"
 AREA="chc"
 FILTERS={'min_price': 1000, 'max_price': 2000}
 
-
 CONFIG_FILE = 'config.json'
 
 LOGAN_SQUARE = [
@@ -23,16 +22,31 @@ BUCKTOWN = [
             [41.913582, -87.687987],
             [41.936104, -87.66362]
            ]
+LAKEVIEW = [
+            [41.932343, -87.673988],
+            [41.961652-87.630129]
+           ]
+           
+LINCOLN_PARK = [
+                [41.910785, -87.68285],
+                [41.933015, -87.620076]
+               ]
+   
 NEIGHBORHOOD_COORDS = {
                         'Logan Square': LOGAN_SQUARE, 
                         'Wicker Park': WICKER_PARK, 
-                        'Bucktown': BUCKTOWN
+                        'Bucktown': BUCKTOWN,
+                        'Lakeview': LAKEVIEW,
+                        'Lincoln Park': LINCOLN_PARK
                       }
 
 CTA_STATIONS = {
                 'Damen': [41.9099186, -87.67762199999999],
                 'Division': [41.9033574, -87.66645340000002],
-                'Western' : [41.915888, -87.68774300000001]
+                'Western' : [41.915888, -87.68774300000001],
+                'Fullerton' : [41.92529760000001, -87.65277479999997],
+                'Belmont' : [41.9397207, -87.6534661],
+                'Addison' : [41.947513, -87.65358800000001]
                 }
 
 
@@ -40,7 +54,7 @@ class ListingResult:
     def __init__(self, result):
         self.cl_result = result
         self.area = ""
-        self.cta_dist = 0.0
+        self.cta_dist = float('NaN')
         self.cta_station = ""
 
 def in_box(coords, box):
@@ -79,22 +93,20 @@ def coord_distance(x1,y1,x2,y2):
 
 def set_cta_dist(dec_result):
     near_cta = False
-    min_dist = float('NaN')
     cta_dist = float('NaN')
     cta_name = "" 
-    MAX_TRANSIT_DIST_KM = 1
+    MAX_TRANSIT_DIST_KM = 1.5
 
     geotag = dec_result.cl_result["geotag"]
     if not geotag:
         return
     for station, coords in CTA_STATIONS.items():
         dist = coord_distance(coords[0], coords[1], geotag[0], geotag[1])
-        if (min_dist is None or dist < min_dist) and dist < MAX_TRANSIT_DIST:
-            cta_name = station
-            near_cta = True
-
-        if (cta_dist is None or dist < min_dist):
-            cta_dist = dist
+        if dist < MAX_TRANSIT_DIST_KM:
+            if (cta_dist is None or dist < cta_dist):
+                cta_name = station
+                near_cta = True
+                cta_dist = dist
 
     dec_result.cta_dist = cta_dist
     dec_result.cta_name = cta_name
