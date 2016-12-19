@@ -40,7 +40,6 @@ class ListingResult:
     def __init__(self, result):
         self.cl_result = result
         self.area = ""
-        self.reported_area = ""
         self.cta_dist = 0.0
         self.cta_station = ""
 
@@ -113,10 +112,16 @@ def load_listings_from_craigslist(craigslist):
     
 def output_to_slack(listing_results, slack_token, slack_channel):
     sc = SlackClient(slack_token)
-    
+
     for dec_result in listing_results:
         result = dec_result.cl_result
-        desc = "{0} | {1} | {2} | {3} | <{4}>".format(dec_result.area, result["price"], dec_result.cta_dist, result["name"], result["url"])
+        desc = "{0} | {1} | {2}:{3} | {4} | <{5}>".format(
+                        result["price"], 
+                        dec_result.area, 
+                        dec_result.cta_station, 
+                        dec_result.cta_dist, 
+                        result["name"], 
+                        result["url"])
         sc.api_call(
             "chat.postMessage", channel=slack_channel, text=desc, username='pybot', icon_emoji=':robot_face:'
         )
