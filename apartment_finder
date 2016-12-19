@@ -2,14 +2,16 @@ import craigslist
 from craigslist import CraigslistHousing
 
 SITE="chicago"
-CATEGORY
+CATEGORY="apa"
+AREA="chc"
+FILTERS={'min_price': 1000, 'max_price': 2000}
 
 def main():
 	config_sit = "chicago"
 	config_category = "apa"
 	config_filters = {}
 	
-	craigslist = CraigslistHousing (site = config_site, area='chc', category=config_category, filters = {'min_price': 1000, 'max_price': 2000} )
+	craigslist = CraigslistHousing (site = SITE, area = AREA, category = CATEGORY, filters = FILTERS )
 	results = craigslist.get_results(sort_by='newest', geotagged=True, limit=20)
 	
 	for result in results:
