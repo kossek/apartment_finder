@@ -1,0 +1,22 @@
+import craigslist
+from craigslist import CraigslistHousing
+
+SITE="chicago"
+CATEGORY
+
+def main():
+	config_sit = "chicago"
+	config_category = "apa"
+	config_filters = {}
+	
+	craigslist = CraigslistHousing (site = config_site, area='chc', category=config_category, filters = {'min_price': 1000, 'max_price': 2000} )
+	results = craigslist.get_results(sort_by='newest', geotagged=True, limit=20)
+	
+	for result in results:
+		print result
+
+
+if __name__ == '__main__':
+	#load json config
+	main() #add config
+	
