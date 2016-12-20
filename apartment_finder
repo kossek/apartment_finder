@@ -3,11 +3,6 @@ from slackclient import SlackClient
 import math
 import json
 
-SITE="chicago"
-CATEGORY="apa"
-AREA="chc"
-FILTERS={'min_price': 1000, 'max_price': 2000}
-
 CONFIG_FILE = 'config.json'
 
 LOGAN_SQUARE = [
@@ -48,7 +43,13 @@ CTA_STATIONS = {
                 'Belmont' : [41.9397207, -87.6534661],
                 'Addison' : [41.947513, -87.65358800000001]
                 }
-
+                
+class Config:
+    def __init__(self, site, category, area, filters):
+        self.site = site
+        self.category = category
+        self.area = area
+        self.filters = filters
 
 class ListingResult:
     def __init__(self, result):
@@ -122,20 +123,29 @@ def load_listings_from_craigslist(craigslist):
         dec_result = ListingResult(result)
         set_area(dec_result, get_area(result), get_reported_area(result))
         set_cta_dist(dec_result)
-        listing_results.append(dec_result)
+
+        if not is_eligible_listing(dec_result):
+            continue
+        else:
+            listing_results.append(dec_result)
     return listing_results
    
+def is_blacklist_name(listing_name):
+    BLACKLIST = ['studio', '1 bedroom' '1 br', 'one bedroom', 'one br', '1br', '1bedroom']
+    for entry in BLACKLIST:
+        if entry.lower() in listing_name.lower():
+            return True
+    return False;
+    
 def is_eligible_listing(listing):
-        return listing.area
+        return listing.area and not is_blacklist_name(listing.cl_result["name"])
 
 def output_to_slack(listing_results, slack_token, slack_channel):
     sc = SlackClient(slack_token)
 
     for dec_result in listing_results:
         result = dec_result.cl_result
-        print result
-        if not is_eligible_listing(dec_result):
-            continue
+
         desc = "{0} | {1} | {2}: {3:.2f} mi | {4} | <{5}>".format(
                         result["price"], 
                         dec_result.area, 
@@ -147,14 +157,15 @@ def output_to_slack(listing_results, slack_token, slack_channel):
             "chat.postMessage", channel=slack_channel, text=desc, username='pybot', icon_emoji=':robot_face:'
         )
     
-def main(slack_token, slack_channel):
-    craigslist = CraigslistHousing (site = SITE, area = AREA, category = CATEGORY, filters = FILTERS )
+def main(config, slack_token, slack_channel):
+    craigslist = CraigslistHousing (site = config.site, area = config.area, category = config.category, filters = config.filters )
     results = load_listings_from_craigslist(craigslist)
     output_to_slack(results, slack_token, slack_channel)
     
 if __name__ == '__main__':
     with open(CONFIG_FILE) as config_file:
         data = json.load(config_file)
-        slack_token = data["slack_token"]
-        slack_channel = data["slack_channel"]
-    main(slack_token, slack_channel)
+        slack_token = data["slack"]["token"]
+        slack_channel = data["slack"]["channel"]
+        config = Config(data["craigslist"]["site"], data["craigslist"]["category"], data["craigslist"]["area"], data["filters"])
+    main(config, slack_token, slack_channel)
