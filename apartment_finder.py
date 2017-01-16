@@ -7,11 +7,11 @@ import json
 CONFIG_FILE = 'config.json'
 
 class Config:
-    def __init__(self, site, category, area, filters):
+    def __init__(self, site, category, area, filters, num_listings_to_scrape):
         self.site = site
         self.category = category
         self.area = area
-        self.filters = filters
+        self.filters = filtersself.num_listings_to_scrape = num_listings_to_scrape
 
 class ListingResult:
     def __init__(self, result):
@@ -54,14 +54,14 @@ def coord_distance(x1,y1,x2,y2):
     return dist
 
 def km_to_mi(km):
-    CONVERSION_FACTOR = 0.621371
+    TO_MILE_CONVERSION_FACTOR = 0.621371
     return CONVERSION_FACTOR * km
      
 def set_cta_dist(dec_result):
     near_cta = False
     cta_dist = float('NaN')
     cta_name = "" 
-    MAX_TRANSIT_DIST_KM = 0.804672
+    MAX_TRANSIT_DIST_KM = 0.804672 #half mile
 
     geotag = dec_result.cl_result["geotag"]
     if not geotag:
@@ -77,9 +77,8 @@ def set_cta_dist(dec_result):
     dec_result.cta_dist = km_to_mi(cta_dist)
     dec_result.cta_station = cta_name
     
-def load_listings_from_craigslist(craigslist):
-    NUM_LISTINGS_TO_SCRAPE = 5
-    results = craigslist.get_results(sort_by='newest', geotagged=True, limit=NUM_LISTINGS_TO_SCRAPE)
+def load_listings_from_craigslist(craigslist, num_listings_to_scrape):
+    results = craigslist.get_results(sort_by='newest', geotagged=True, limit=num_listings_to_scrape)
     listing_results = []
     for result in results:
         dec_result = ListingResult(result)
@@ -120,7 +119,7 @@ def output_to_slack(listing_results, slack_token, slack_channel):
     
 def main(config, slack_token, slack_channel):
     craigslist = CraigslistHousing (site = config.site, area = config.area, category = config.category, filters = config.filters )
-    results = load_listings_from_craigslist(craigslist)
+    results = load_listings_from_craigslist(craigslist, num_listings_to_scrape = config.num_listings_to_scrape)
     output_to_slack(results, slack_token, slack_channel)
     
 if __name__ == '__main__':
@@ -128,5 +127,5 @@ if __name__ == '__main__':
         data = json.load(config_file)
         slack_token = data["slack"]["token"]
         slack_channel = data["slack"]["channel"]
-        config = Config(data["craigslist"]["site"], data["craigslist"]["category"], data["craigslist"]["area"], data["filters"])
+        config = Config(data["craigslist"]["site"], data["craigslist"]["category"], data["craigslist"]["area"], data["filters"], data["num_listings_to_scrape"])
     main(config, slack_token, slack_channel)
