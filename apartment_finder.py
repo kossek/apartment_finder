@@ -1,17 +1,21 @@
 from craigslist import CraigslistHousing
 from slackclient import SlackClient
 from coords import *
+from sql_connection import ApartmentsSqlConnection
 import math
+import time
 import json
 
 CONFIG_FILE = 'config.json'
 
 class Config:
-    def __init__(self, site, category, area, filters, num_listings_to_scrape):
+    def __init__(self, site, category, area, filters, num_listings_to_scrape, sleep_interval):
         self.site = site
         self.category = category
         self.area = area
-        self.filters = filtersself.num_listings_to_scrape = num_listings_to_scrape
+        self.filters = filters
+        self.num_listings_to_scrape = num_listings_to_scrape
+        self.sleep_interval = sleep_interval
 
 class ListingResult:
     def __init__(self, result):
@@ -38,8 +42,8 @@ def get_area(result):
     
 def get_reported_area(result):
     location = result["where"]
-    for area, coords in NEIGHBORHOOD_COORDS.iteritems():
-        if area and coords:
+    for area, coords in NEIGHBORHOOD_COORDS.items():
+        if area and coords and location:
             if area.lower() in location.lower():
                 return area
     
@@ -55,7 +59,7 @@ def coord_distance(x1,y1,x2,y2):
 
 def km_to_mi(km):
     TO_MILE_CONVERSION_FACTOR = 0.621371
-    return CONVERSION_FACTOR * km
+    return TO_MILE_CONVERSION_FACTOR * km
      
 def set_cta_dist(dec_result):
     near_cta = False
@@ -92,7 +96,7 @@ def load_listings_from_craigslist(craigslist, num_listings_to_scrape):
     return listing_results
    
 def is_blacklist_name(listing_name):
-    BLACKLIST = ['studio', '1 bedroom' '1 br', 'one bedroom', 'one br', '1br', '1bedroom']
+    BLACKLIST = ['studio', '1 bedroom' '1 br', 'one bedroom', 'one br', '1br', 'one bed' '1bedroom']
     for entry in BLACKLIST:
         if entry.lower() in listing_name.lower():
             return True
@@ -117,15 +121,36 @@ def output_to_slack(listing_results, slack_token, slack_channel):
             "chat.postMessage", channel=slack_channel, text=desc, username='pybot', icon_emoji=':robot_face:'
         )
     
-def main(config, slack_token, slack_channel):
-    craigslist = CraigslistHousing (site = config.site, area = config.area, category = config.category, filters = config.filters )
+
+def scrape_cycle(craigslist, sql_connection, config):
     results = load_listings_from_craigslist(craigslist, num_listings_to_scrape = config.num_listings_to_scrape)
     output_to_slack(results, slack_token, slack_channel)
+
+
+def main(config, slack_token, slack_channel):
+    craigslist = CraigslistHousing (site = config.site, area = config.area, category = config.category, filters = config.filters )
+    sql_connection = ApartmentsSqlConnection()
+    
+    while True:
+        print("{}: Starting scrape cycle".format(time.ctime()))
+        try:
+            scrape_cycle(craigslist, sql_connection, config)
+        except KeyboardInterrupt:
+            print("Exiting....")
+            sys.exit(1)
+        except Exception as exc:
+            print("Error with the scraping:", sys.exc_info()[0])
+            traceback.print_exc()
+        else:
+            print("{}: Successfully finished scraping".format(time.ctime()))
+        time.sleep(config.sleep_interval)
+        
     
 if __name__ == '__main__':
     with open(CONFIG_FILE) as config_file:
         data = json.load(config_file)
         slack_token = data["slack"]["token"]
         slack_channel = data["slack"]["channel"]
-        config = Config(data["craigslist"]["site"], data["craigslist"]["category"], data["craigslist"]["area"], data["filters"], data["num_listings_to_scrape"])
+        config = Config(data["craigslist"]["site"], data["craigslist"]["category"], 
+        data["craigslist"]["area"], data["filters"], data["num_listings_to_scrape"], data["sleep_interval_sec"])
     main(config, slack_token, slack_channel)
