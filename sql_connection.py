@@ -4,8 +4,8 @@ from sqlalchemy import Column, Integer, String, DateTime, Float, Boolean
 from sqlalchemy.orm import sessionmaker
 
 Base = declarative_base()
-class ApartmentsDb(Base):
-    __tablename__ = 'apartments'
+class Listing(Base):
+    __tablename__ = 'listings'
     
     id = Column(Integer, primary_key=True)
     link = Column(String, unique=True)
@@ -23,8 +23,8 @@ class ApartmentsDb(Base):
 
 class ApartmentsSqlConnection:
     def __init__(self):
-        engine = create_engine('sqlite:///listings.db', echo=False)
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        Base.metadata.create_all(engine)
+        self.engine = create_engine('sqlite:///listings.db', echo=False)
+        Session = sessionmaker(bind=self.engine)
+        self.session = Session()
+        Base.metadata.create_all(self.engine)
         

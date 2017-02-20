@@ -102,9 +102,32 @@ def load_listings_from_craigslist(craigslist, num_listings_to_scrape):
     return listing_results
 
 
-def filter_listings(listings):
-    results = [x for x in listings if x.area ]
-    results = [x for x in results if not is_blacklist_name(x.cl_result["name"]) ]
+def filter_listings(listings, sql_connection):
+    print ("before area filter")
+    for i in listings:
+        print (i.cl_result["name"])
+    
+    listings = [x for x in listings if x.area ]
+    
+    print ("before name filter")
+    for i in listings:
+        print (i.cl_result["name"])
+    listings = [x for x in listings if not is_blacklist_name(x.cl_result["name"]) ]
+    
+    print ("before sql filter")
+    for i in listings:
+        print (i.cl_result["name"])
+    
+    results = []
+    for result in listings:
+        sql_result = sql_connection.session.query(Listing).filter_by(cl_id=result["id"]).first()
+        if not sql_result:
+            results.append(result)
+            
+    print ("postsql filter")
+    for i in results:
+        print (i.cl_result["name"])
+        
     return results
 
     
@@ -136,7 +159,7 @@ def output_to_slack(listing_results, slack_token, slack_channel):
 
 def scrape_cycle(craigslist, sql_connection, config):
     results = load_listings_from_craigslist(craigslist, num_listings_to_scrape = config.num_listings_to_scrape)
-    results = filter_listings(results)
+    results = filter_listings(results, sql_connection)
     output_to_slack(results, slack_token, slack_channel)
 
 
