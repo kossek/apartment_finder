@@ -24,8 +24,7 @@ class ApartmentsDb(Base):
 class ApartmentsSqlConnection:
     def __init__(self):
         engine = create_engine('sqlite:///listings.db', echo=False)
-        Session = sessionmaker(bind=engine) 
+        Session = sessionmaker(bind=engine)
         session = Session()
         Base.metadata.create_all(engine)
-
         

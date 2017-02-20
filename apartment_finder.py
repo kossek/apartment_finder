@@ -5,6 +5,7 @@ from sql_connection import ApartmentsSqlConnection
 import math
 import time
 import json
+import sys
 
 CONFIG_FILE = 'config.json'
 
@@ -17,6 +18,7 @@ class Config:
         self.num_listings_to_scrape = num_listings_to_scrape
         self.sleep_interval = sleep_interval
 
+        
 class ListingResult:
     def __init__(self, result):
         self.cl_result = result
@@ -24,6 +26,7 @@ class ListingResult:
         self.cta_dist = float('NaN')
         self.cta_station = "???"
 
+        
 def in_box(coords, box):
     if not coords or not box:
         return False
@@ -32,6 +35,7 @@ def in_box(coords, box):
         return True
     return False
 
+    
 def get_area(result):
     geotag = result["geotag"]
     area_found = False
@@ -39,28 +43,33 @@ def get_area(result):
     for area, coords in NEIGHBORHOOD_COORDS.items():
         if in_box(geotag, coords):
             return area
-    
+  
+
 def get_reported_area(result):
     location = result["where"]
     for area, coords in NEIGHBORHOOD_COORDS.items():
         if area and coords and location:
             if area.lower() in location.lower():
                 return area
-    
+ 
+
 def set_area(dec_result, area, reported_area):
     if area:
         dec_result.area = area
     elif reported_area:
         dec_result.area = reported_area
     
+
 def coord_distance(x1,y1,x2,y2):
     dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
     return dist
 
+
 def km_to_mi(km):
     TO_MILE_CONVERSION_FACTOR = 0.621371
     return TO_MILE_CONVERSION_FACTOR * km
-     
+
+ 
 def set_cta_dist(dec_result):
     near_cta = False
     cta_dist = float('NaN')
@@ -80,7 +89,8 @@ def set_cta_dist(dec_result):
 
     dec_result.cta_dist = km_to_mi(cta_dist)
     dec_result.cta_station = cta_name
-    
+
+
 def load_listings_from_craigslist(craigslist, num_listings_to_scrape):
     results = craigslist.get_results(sort_by='newest', geotagged=True, limit=num_listings_to_scrape)
     listing_results = []
@@ -88,23 +98,25 @@ def load_listings_from_craigslist(craigslist, num_listings_to_scrape):
         dec_result = ListingResult(result)
         set_area(dec_result, get_area(result), get_reported_area(result))
         set_cta_dist(dec_result)
-
-        if not is_eligible_listing(dec_result):
-            continue
-        else:
-            listing_results.append(dec_result)
+        listing_results.append(dec_result)
     return listing_results
-   
+
+
+def filter_listings(listings):
+    results = [x for x in listings if x.area ]
+    results = [x for x in results if not is_blacklist_name(x.cl_result["name"]) ]
+    return results
+
+    
 def is_blacklist_name(listing_name):
     BLACKLIST = ['studio', '1 bedroom' '1 br', 'one bedroom', 'one br', '1br', 'one bed' '1bedroom']
     for entry in BLACKLIST:
         if entry.lower() in listing_name.lower():
             return True
     return False;
-    
-def is_eligible_listing(listing):
-        return listing.area and not is_blacklist_name(listing.cl_result["name"])
 
+
+        
 def output_to_slack(listing_results, slack_token, slack_channel):
     sc = SlackClient(slack_token)
     for dec_result in listing_results:
@@ -124,6 +136,7 @@ def output_to_slack(listing_results, slack_token, slack_channel):
 
 def scrape_cycle(craigslist, sql_connection, config):
     results = load_listings_from_craigslist(craigslist, num_listings_to_scrape = config.num_listings_to_scrape)
+    results = filter_listings(results)
     output_to_slack(results, slack_token, slack_channel)
 
 
@@ -143,6 +156,7 @@ def main(config, slack_token, slack_channel):
             traceback.print_exc()
         else:
             print("{}: Successfully finished scraping".format(time.ctime()))
+        print('sleeping for {} seconds'.format(config.sleep_interval))
         time.sleep(config.sleep_interval)
         
     
