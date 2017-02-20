@@ -2,6 +2,7 @@ from craigslist import CraigslistHousing
 from slackclient import SlackClient
 from coords import *
 from sql_connection import ApartmentsSqlConnection
+from sql_connection import Listing
 import math
 import time
 import json
@@ -120,7 +121,7 @@ def filter_listings(listings, sql_connection):
     
     results = []
     for result in listings:
-        sql_result = sql_connection.session.query(Listing).filter_by(cl_id=result["id"]).first()
+        sql_result = sql_connection.session.query(Listing).filter_by(cl_id=result.cl_result["id"]).first()
         if not sql_result:
             results.append(result)
             
@@ -132,7 +133,7 @@ def filter_listings(listings, sql_connection):
 
     
 def is_blacklist_name(listing_name):
-    BLACKLIST = ['studio', '1 bedroom' '1 br', 'one bedroom', 'one br', '1br', 'one bed' '1bedroom']
+    BLACKLIST = ['studio', '1 bedroom' '1 br', 'one bedroom', 'one br', '1br', 'one bed' '1bedroom', '3br', '3 br', '3 bedroom', 'three br', 'three bedroom']
     for entry in BLACKLIST:
         if entry.lower() in listing_name.lower():
             return True
