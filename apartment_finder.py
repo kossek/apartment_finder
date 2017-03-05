@@ -3,6 +3,7 @@ from slackclient import SlackClient
 from coords import *
 from sql_connection import ApartmentsSqlConnection
 from sql_connection import Listing
+from dateutil.parser import parse
 import math
 import time
 import json
@@ -107,23 +108,42 @@ def filter_listings(listings, sql_connection):
     listings = [x for x in listings if x.area ]
     listings = [x for x in listings if not is_blacklist_name(x.cl_result["name"]) ]
     
-    print ("before sql filter")
-    for i in listings:
-        print (i.cl_result["name"])
-    
     results = []
     for result in listings:
-        sql_result = sql_connection.session.query(Listing).filter_by(cl_id=result.cl_result["id"]).first()
+        sql_result = sql_connection.session.query(Listing).filter_by(id=result.cl_result["id"]).first()
         if not sql_result:
             results.append(result)
-            
-    print ("postsql filter")
-    for i in results:
-        print (i.cl_result["name"])
+            add_listing_to_db(sql_connection, result)
         
     return results
-
     
+    
+def add_listing_to_db(sql_connection, result):
+    lat = 0
+    lon = 0
+    if result.cl_result["geotag"] is not None:
+        lat = result.cl_result["geotag"][0]
+        lon = result.cl_result["geotag"][1]
+        
+    price = 0
+    price = float(result.cl_result["price"].replace("$", ""))
+
+    listing = Listing(id = result.cl_result["id"], 
+                      link = result.cl_result["url"],
+                      created = parse(result.cl_result["datetime"]),
+                      latitude = lat,
+                      longitude = lon,
+                      name = result.cl_result["name"],
+                      price = price,
+                      location = result.area,
+                      area = result.area,
+                      cta_stop = result.cta_station,
+                    )
+                    
+    sql_connection.session.add(listing)
+    sql_connection.session.commit()
+  
+  
 def is_blacklist_name(listing_name):
     BLACKLIST = ['studio', 
         '1 bedroom', '1 br', '1br', 'one bedroom', 'one br', 'one bed' '1bedroom', '1 bed',
@@ -133,8 +153,7 @@ def is_blacklist_name(listing_name):
             return True
     return False;
 
-
-        
+     
 def output_to_slack(listing_results, slack_token, slack_channel):
     sc = SlackClient(slack_token)
     for dec_result in listing_results:

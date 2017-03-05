@@ -7,16 +7,14 @@ Base = declarative_base()
 class Listing(Base):
     __tablename__ = 'listings'
     
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, unique=True)
     link = Column(String, unique=True)
     created = Column(DateTime)
-    geotag = Column(String)
     latitude = Column(Float)
     longitude = Column(Float)
     name = Column(String)
     price = Column(Float)
     location = Column(String)
-    cl_id = Column(Integer, unique=True)
     area = Column(String)
     cta_stop = Column(String)
 
