@@ -104,7 +104,6 @@ def load_listings_from_craigslist(craigslist, num_listings_to_scrape):
 
 
 def filter_listings(listings, sql_connection):
-    print ("before area filter")
     listings = [x for x in listings if x.area ]
     listings = [x for x in listings if not is_blacklist_name(x.cl_result["name"]) ]
     
@@ -127,7 +126,7 @@ def filter_listings(listings, sql_connection):
     
 def is_blacklist_name(listing_name):
     BLACKLIST = ['studio', 
-        '1 bedroom', '1 br', '1br', 'one bedroom', 'one br', 'one bed' '1bedroom', '1 bed'
+        '1 bedroom', '1 br', '1br', 'one bedroom', 'one br', 'one bed' '1bedroom', '1 bed',
         '3 bedroom', '3 br', '3br', 'three bedroom', 'three br', 'three bed', '3bedroom', '3 bed' ]
     for entry in BLACKLIST:
         if entry.lower() in listing_name.lower():
