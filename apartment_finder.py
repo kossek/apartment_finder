@@ -70,8 +70,10 @@ def coord_distance(x1,y1,x2,y2):
 def km_to_mi(km):
     TO_MILE_CONVERSION_FACTOR = 0.621371
     return TO_MILE_CONVERSION_FACTOR * km
-
- 
+    
+def km_to_meters(km):
+    return km * 1000
+    
 def set_cta_dist(dec_result):
     near_cta = False
     cta_dist = float('NaN')
@@ -89,7 +91,8 @@ def set_cta_dist(dec_result):
                 near_cta = True
                 cta_dist = dist
 
-    dec_result.cta_dist = km_to_mi(cta_dist)
+                
+    dec_result.cta_dist = km_to_meters(cta_dist)
     dec_result.cta_station = cta_name
 
 
@@ -114,6 +117,7 @@ def filter_listings(listings, sql_connection):
         if not sql_result:
             results.append(result)
             add_listing_to_db(sql_connection, result)
+
         
     return results
     
@@ -143,9 +147,8 @@ def add_listing_to_db(sql_connection, result):
     sql_connection.session.add(listing)
     sql_connection.session.commit()
   
-  
 def is_blacklist_name(listing_name):
-    BLACKLIST = ['studio', 
+    BLACKLIST = ['studio',
         '1 bedroom', '1 br', '1br', 'one bedroom', 'one br', 'one bed' '1bedroom', '1 bed',
         '3 bedroom', '3 br', '3br', 'three bedroom', 'three br', 'three bed', '3bedroom', '3 bed' ]
     for entry in BLACKLIST:
@@ -159,7 +162,7 @@ def output_to_slack(listing_results, slack_token, slack_channel):
     for dec_result in listing_results:
         result = dec_result.cl_result
 
-        desc = "{0} | {1} | {2}: {3:.2f} mi | {4} | <{5}>".format(
+        desc = "{0} | {1} | {2}: {3:.2f} meters | {4} | <{5}>".format(
                         result["price"], 
                         dec_result.area, 
                         dec_result.cta_station, 
