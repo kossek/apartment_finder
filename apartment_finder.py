@@ -174,6 +174,7 @@ def output_to_slack(listing_results, slack_token, slack_channel):
 def scrape_cycle(craigslist, sql_connection, config):
     results = load_listings_from_craigslist(craigslist, num_listings_to_scrape = config.num_listings_to_scrape)
     results = filter_listings(results, sql_connection)
+    print ("Sending {} listings to slack".format(len(results)))
     output_to_slack(results, slack_token, slack_channel)
 
 
