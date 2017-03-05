@@ -148,10 +148,17 @@ def add_listing_to_db(sql_connection, result):
     sql_connection.session.commit()
   
 def is_blacklist_name(listing_name):
-    BLACKLIST = ['studio',
-        '1 bedroom', '1 br', '1br', 'one bedroom', 'one br', 'one bed' '1bedroom', '1 bed',
-        '3 bedroom', '3 br', '3br', 'three bedroom', 'three br', 'three bed', '3bedroom', '3 bed' ]
-    for entry in BLACKLIST:
+    blacklist_prefixs = ['', '1', 'one', '3', 'three']
+    blacklist_suffixes = ['bedroom', 'br', 'bed', 'bdrm', 'bdm']
+    
+    blacklist = ['studio']
+    
+    for prefix in blacklist_prefixs:
+        for suffix in blacklist_suffixes:
+            blacklist.append(prefix + suffix)
+            blacklist.append(prefix + " " + suffix)
+            
+    for entry in blacklist:
         if entry.lower() in listing_name.lower():
             return True
     return False;
