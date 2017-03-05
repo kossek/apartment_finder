@@ -126,7 +126,9 @@ def filter_listings(listings, sql_connection):
 
     
 def is_blacklist_name(listing_name):
-    BLACKLIST = ['studio', '1 bedroom' '1 br', 'one bedroom', 'one br', '1br', 'one bed' '1bedroom', '3br', '3 br', '3 bedroom', 'three br', 'three bedroom']
+    BLACKLIST = ['studio', 
+        '1 bedroom', '1 br', '1br', 'one bedroom', 'one br', 'one bed' '1bedroom', '1 bed'
+        '3 bedroom', '3 br', '3br', 'three bedroom', 'three br', 'three bed', '3bedroom', '3 bed' ]
     for entry in BLACKLIST:
         if entry.lower() in listing_name.lower():
             return True
