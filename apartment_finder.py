@@ -105,14 +105,7 @@ def load_listings_from_craigslist(craigslist, num_listings_to_scrape):
 
 def filter_listings(listings, sql_connection):
     print ("before area filter")
-    for i in listings:
-        print (i.cl_result["name"])
-    
     listings = [x for x in listings if x.area ]
-    
-    print ("before name filter")
-    for i in listings:
-        print (i.cl_result["name"])
     listings = [x for x in listings if not is_blacklist_name(x.cl_result["name"]) ]
     
     print ("before sql filter")
